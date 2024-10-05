@@ -113,7 +113,8 @@ def plot_picking_predictions(model, test_loader, device, num_samples=10):
     with torch.no_grad():
         for inputs, targets in test_loader:
             inputs, targets = inputs.to(device), targets.to(device)
-            outputs = model(inputs)
+            outputs = model(inputs.unsqueeze(-1))
+            targets = targets.unsqueeze(2)
             samples.append((inputs.cpu(), targets.cpu(), outputs.cpu()))
             if len(samples) >= num_samples:
                 break
@@ -155,4 +156,4 @@ def process_data( percentile=0.998 ): #["_N.csv", "_E.csv", "_Z.csv"]
 
     return train_loader, test_loader
 
-process_data()
+# process_data()
