@@ -202,7 +202,7 @@ def plot_picking_predictions(model, test_loader, device, num_samples=10):
     plt.show()
 
 #Main processing function
-def process_data(labels_type, percentile=0.998,plot=False, channels=["_N.csv", "_E.csv", "_Z.csv"] ):
+def process_data(labels_type, percentile=0.998,plot=False, channels=["_Z.csv"] ): #["_N.csv", "_E.csv", "_Z.csv"]
     #Load the dataset
     waveforms, labels = load_waveforms_and_labels(waveforms_folder=waveforms_folder,
                                                   catalogues_folder=catalogues_folder,
