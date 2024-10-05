@@ -3,3 +3,7 @@ pandas
 scipy
 obspy
 matplotlib
+scikit-learn
+tqdm
+torch
+torchvision
