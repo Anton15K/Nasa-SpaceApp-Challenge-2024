@@ -65,6 +65,7 @@ def process_labels(start, end, factor=10, sequence_length=1):
     # Create a one-dimensional array of zeros with length = sequence_length
     labels = np.zeros(sequence_length)
     labels[start:end+1] = 1
+    labels[start] = 1
     return labels
 
 def load_waveforms_and_labels(waveforms_folder, catalogues_folder, norm_percentile, channels,  labels_type='binary'): #, channels=["_N.csv", "_E.csv", "_Z.csv"], channels=["_Z.csv"]
