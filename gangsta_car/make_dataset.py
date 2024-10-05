@@ -59,7 +59,7 @@ def load_waveform(file_path):
         print(f"Error loading waveform {file_path}: {e}")
         return None
 
-def process_labels(start, end, factor=10, sequence_length=1):
+def process_labels(start, end, factor=10, sequence_length=600):
     start = int(float(start) * factor)
     # end = int(float(end) * factor)
     # Create a one-dimensional array of zeros with length = sequence_length
