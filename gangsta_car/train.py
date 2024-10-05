@@ -67,7 +67,7 @@ def train_picking(channels, lr, epochs, train_loader, device, name='bilstm_event
             running_loss += loss.item()
 
         # Step the scheduler
-        if epoch > 180:
+        if epoch > 200:
             scheduler.step()
 
         print(f"Epoch {epoch+1}/{epochs}, Loss: {running_loss/len(train_loader)}, LR: {scheduler.get_last_lr()[0]}") #, LR: {scheduler.get_last_lr()[0]}
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     # train_detection(3, 0.001, 10)
     model = train_picking(channels=1,
                   lr=0.001,
-                  epochs=220,
+                  epochs=260,
                   train_loader=train_loader,
                   device=device,
                   )

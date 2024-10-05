@@ -61,10 +61,10 @@ def load_waveform(file_path):
 
 def process_labels(start, end, factor=10, sequence_length=1):
     start = int(float(start) * factor)
-    end = int(float(end) * factor)
+    # end = int(float(end) * factor)
     # Create a one-dimensional array of zeros with length = sequence_length
     labels = np.zeros(sequence_length)
-    labels[start:end+1] = 1
+    # labels[start:end+1] = 1
     labels[start] = 1
     return labels
 
