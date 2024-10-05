@@ -1,5 +1,6 @@
 import os
 import pickle
+import numpy as np
 from sklearn.metrics import  accuracy_score, precision_recall_fscore_support
 import torch
 import torch.nn as nn
@@ -56,13 +57,14 @@ def train_transfer(model, lr, epochs, train_loader, device, name='moon_1ch.pth')
 
 def evaluate(model, train_loader, test_loader, criterion):
     model.eval()
-    # Initialize metrics
+
     train_loss = 0.0
     test_loss = 0.0
-    train_correct = 0
-    test_correct = 0
-    train_total = 0
-    test_total = 0
+    train_preds = []
+    train_labels = []
+    test_preds = []
+    test_labels = []
+
     # Evaluate training set
     with torch.no_grad():
         for inputs, targets in train_loader:
@@ -72,10 +74,9 @@ def evaluate(model, train_loader, test_loader, criterion):
             loss = criterion(outputs, targets)
             train_loss += loss.item()
             predicted = (outputs > 0.5).float()
-            train_correct += (predicted == targets).sum().item()
-            train_total += targets.numel()
-    train_accuracy = train_correct / train_total
-    train_loss /= len(train_loader)
+            train_preds.append(predicted.cpu().numpy())
+            train_labels.append(targets.cpu().numpy())
+
     # Evaluate test set
     with torch.no_grad():
         for inputs, targets in test_loader:
@@ -85,14 +86,22 @@ def evaluate(model, train_loader, test_loader, criterion):
             loss = criterion(outputs, targets)
             test_loss += loss.item()
             predicted = (outputs > 0.5).float()
-            test_correct += (predicted == targets).sum().item()
-            test_total += targets.numel()
-    test_accuracy = test_correct / test_total
-    test_loss /= len(test_loader)
-    # Print metrics
-    print(f"Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}")
-    print(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
+            test_preds.append(predicted.cpu().numpy())
+            test_labels.append(targets.cpu().numpy())
 
+    train_preds = np.concatenate(train_preds)
+    train_labels = np.concatenate(train_labels)
+    test_preds = np.concatenate(test_preds)
+    test_labels = np.concatenate(test_labels)
+
+    train_precision, train_recall, train_f1, _ = precision_recall_fscore_support(train_labels.flatten(), train_preds.flatten(), average='binary')
+    test_precision, test_recall, test_f1, _ = precision_recall_fscore_support(test_labels.flatten(), test_preds.flatten(), average='binary')
+
+    train_loss /= len(train_loader)
+    test_loss /= len(test_loader)
+
+    print(f"Train Loss: {train_loss:.4f}, Precision: {train_precision:.4f}, Recall: {train_recall:.4f}, F1-Score: {train_f1:.4f}")
+    print(f"Test Loss: {test_loss:.4f}, Precision: {test_precision:.4f}, Recall: {test_recall:.4f}, F1-Score: {test_f1:.4f}")
 
 
 if __name__ == '__main__':
