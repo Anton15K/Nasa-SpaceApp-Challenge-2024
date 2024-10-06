@@ -42,7 +42,7 @@ class SignalDetectionV1(nn.Module): #Outputs whether there is an event in the wa
         )
 
 class BiLSTMEventDetector(nn.Module):
-    def __init__(self, input_channels=3, hidden_size=64, num_layers=2, dropout_prob=0.4, sequence_length=600):
+    def __init__(self, input_channels=3, hidden_size=64, num_layers=2, dropout_prob=0.7, sequence_length=600):
         super(BiLSTMEventDetector, self).__init__()
 
         # Bidirectional LSTM layer

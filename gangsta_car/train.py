@@ -7,8 +7,9 @@ import torch.optim as optim
 from make_dataset import WaveformDataset, plot_picking_predictions, process_data
 from models import BiLSTMEventDetector, SignalDetectionV1
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import precision_score, recall_score, f1_score
+
 
 def load_dataset():
     try:
@@ -48,11 +49,11 @@ def train_detection(channels, lr, epochs, name='signal_detection.pth'):
     torch.save(model.state_dict(), os.path.join('models', name))
     evaluate(model, train_loader, test_loader, criterion)
 
-def train_picking(channels, lr, epochs, train_loader, device, name='bilstm_event_detector.pth'):
+def train_picking(channels, lr, epochs, train_loader, test_loader, device, name='bilstm_event_detector.pth'):
     model = BiLSTMEventDetector(input_channels=channels).to(device)
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
-    scheduler = StepLR(optimizer, step_size=10, gamma=0.1)  #factor of 0.1 every 10 epochs
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True)
 
     for epoch in range(epochs):
         model.train()
@@ -68,11 +69,22 @@ def train_picking(channels, lr, epochs, train_loader, device, name='bilstm_event
             optimizer.step()
             running_loss += loss.item()
 
-        # Step the scheduler
-        if epoch > 160:
-            scheduler.step()
+        # Calculate validation loss
+        model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for inputs, targets in test_loader:
+                inputs, targets = inputs.to(device), targets.to(device)
+                targets = targets.unsqueeze(2)
+                outputs = model(inputs)
+                loss = criterion(outputs, targets)
+                val_loss += loss.item()
+        val_loss /= len(test_loader)
 
-        print(f"Epoch {epoch+1}/{epochs}, Loss: {running_loss/len(train_loader)}, LR: {scheduler.get_last_lr()[0]}") #, LR: {scheduler.get_last_lr()[0]}
+        # Step the scheduler
+        scheduler.step(val_loss)
+
+        print(f"Epoch {epoch+1}/{epochs}, Train Loss: {running_loss/len(train_loader)}, Val Loss: {val_loss}, LR: {optimizer.param_groups[0]['lr']}")
 
     torch.save(model.state_dict(), os.path.join('models', name))
     return model
@@ -124,17 +136,18 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     train_loader, test_loader = load_dataset()
     # train_detection(3, 0.001, 10)
-    # model = train_picking(channels=1,
-    #               lr=0.001,
-    #               epochs=200,
-    #               train_loader=train_loader,
-    #               device=device,
-    #               )
+    model = train_picking(channels=1,
+                  lr=0.001,
+                  epochs=200,
+                  train_loader=train_loader,
+                  test_loader=test_loader,
+                  device=device,
+                  )
     #Evaluate
-    model = BiLSTMEventDetector(input_channels=1).to(device)
+    # model = BiLSTMEventDetector(input_channels=1).to(device)
 
-    state_dict = torch.load(os.path.join('models', '1ch_single.pth'), map_location=device)
-    model.load_state_dict(state_dict)
+    # state_dict = torch.load(os.path.join('models', '1ch_single.pth'), map_location=device)
+    # model.load_state_dict(state_dict)
 
     evaluate(model, train_loader, test_loader, nn.BCELoss(), 'sequence', device)
     plot_picking_predictions(model, test_loader, device)
