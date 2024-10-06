@@ -38,7 +38,26 @@ def change_file_to_batches(data_path, filename, batched_triggers, batch_size=600
         batched_velocity.append(batches)
     return batched_velocity
 
+def find_smallest_timeframe(indices):
+    max_count = 0
+    leftmost_index = None
+    best_start = None
+    best_end = None
 
+    # Loop through all pairs of indices to determine the window that has the most points
+    for i in range(len(indices)):
+        for j in range(i, len(indices)):
+            start = indices[i]
+            end = indices[j]
+            count = j - i + 1
+
+            if count > max_count:
+                max_count = count
+                leftmost_index = start
+                best_start = start
+                best_end = end
+
+    return leftmost_index, best_start, best_end
 
 def perform_detection_and_picking(detection_model, picker_model, batched_velocity, batched_triggers):
     """
@@ -110,7 +129,7 @@ def main():
 
     # Perform detection and picking
     event_indices = perform_detection_and_picking(detection_model, picker_model, batched_velocity, batched_triggers)
-    print(event_indices)
+    print(find_smallest_timeframe(event_indices))
     # print("Detected event indices in the initial waveform:")
     # for index in event_indices:
     #     print(index)
