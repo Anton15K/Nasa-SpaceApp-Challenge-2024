@@ -9,6 +9,7 @@ from make_lunar_dataset import WaveformDataset, plot_picking_predictions, proces
 from models import BiLSTMEventDetector, SignalDetectionV1
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import StepLR
+from sklearn.metrics import precision_score, recall_score, f1_score
 
 def load_dataset():
     try:
@@ -18,11 +19,11 @@ def load_dataset():
             train_dataset = WaveformDataset(X_train, y_train)
             test_dataset = WaveformDataset(X_test, y_test)
 
-            train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-            test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+            train_loader = DataLoader(train_dataset, shuffle=True)
+            test_loader = DataLoader(test_dataset, shuffle=False)
         return train_loader, test_loader
     except:
-        train_loader, test_loader = process_data('sequence')  # Load the dataset if not stored already
+        train_loader, test_loader = process_data()  # Load the dataset if not stored already
         return train_loader, test_loader
 
 def train_transfer(model, lr, epochs, train_loader, device, name='moon_1ch.pth'):
@@ -40,8 +41,9 @@ def train_transfer(model, lr, epochs, train_loader, device, name='moon_1ch.pth')
 
             optimizer.zero_grad()
             targets = targets.unsqueeze(2)  # Shape: [batch_size, sequence_length, 1]
-
-            outputs = model(inputs.unsqueeze(-1))
+            inputs = inputs.unsqueeze(2)
+            
+            outputs = model(inputs)
 
             #Calculate loss
             loss = criterion(outputs, targets)
@@ -55,53 +57,49 @@ def train_transfer(model, lr, epochs, train_loader, device, name='moon_1ch.pth')
     torch.save(model, os.path.join('models', name))
     return model
 
-def evaluate(model, train_loader, test_loader, criterion):
+def evaluate(model, train_loader, test_loader, criterion, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')):
+    model.to(device)
     model.eval()
 
-    train_loss = 0.0
-    test_loss = 0.0
-    train_preds = []
-    train_labels = []
-    test_preds = []
-    test_labels = []
+    def evaluate_loader(loader, loader_name=""):
+        total_loss = 0.0
+        all_targets = []
+        all_predictions = []
+        with torch.no_grad():
+            for inputs, targets in loader:
+                inputs, targets = inputs.to(device), targets.to(device)
+                targets = targets.unsqueeze(2)
+                inputs = inputs.unsqueeze(2)
+                outputs = model(inputs)
+                loss = criterion(outputs, targets)
+                total_loss += loss.item()
 
-    # Evaluate training set
-    with torch.no_grad():
-        for inputs, targets in train_loader:
-            inputs, targets = inputs.to(device), targets.to(device)
-            targets = targets.unsqueeze(2)
-            outputs = model(inputs.unsqueeze(-1))
-            loss = criterion(outputs, targets)
-            train_loss += loss.item()
-            predicted = (outputs > 0.5).float()
-            train_preds.append(predicted.cpu().numpy())
-            train_labels.append(targets.cpu().numpy())
+                # Convert predictions to binary
+                predicted = (outputs > 0.3).float()
+
+                all_predictions.append(predicted.view(-1).cpu().numpy())
+                all_targets.append(targets.view(-1).cpu().numpy())
+
+        all_predictions = np.concatenate(all_predictions)
+        all_targets = np.concatenate(all_targets)
+
+        # Calculate metrics
+        precision = precision_score(all_targets, all_predictions, zero_division=0)
+        recall = recall_score(all_targets, all_predictions, zero_division=0)
+        f1 = f1_score(all_targets, all_predictions, zero_division=0)
+
+        avg_loss = total_loss / len(loader)
+
+        return avg_loss, precision, recall, f1
+
+    # Evaluate train set
+    train_loss, train_precision, train_recall, train_f1 = evaluate_loader(train_loader, "Train")
 
     # Evaluate test set
-    with torch.no_grad():
-        for inputs, targets in test_loader:
-            inputs, targets = inputs.to(device), targets.to(device)
-            targets = targets.unsqueeze(2)
-            outputs = model(inputs.unsqueeze(-1))
-            loss = criterion(outputs, targets)
-            test_loss += loss.item()
-            predicted = (outputs > 0.5).float()
-            test_preds.append(predicted.cpu().numpy())
-            test_labels.append(targets.cpu().numpy())
+    test_loss, test_precision, test_recall, test_f1 = evaluate_loader(test_loader, "Test")
 
-    train_preds = np.concatenate(train_preds)
-    train_labels = np.concatenate(train_labels)
-    test_preds = np.concatenate(test_preds)
-    test_labels = np.concatenate(test_labels)
-
-    train_precision, train_recall, train_f1, _ = precision_recall_fscore_support(train_labels.flatten(), train_preds.flatten(), average='binary')
-    test_precision, test_recall, test_f1, _ = precision_recall_fscore_support(test_labels.flatten(), test_preds.flatten(), average='binary')
-
-    train_loss /= len(train_loader)
-    test_loss /= len(test_loader)
-
-    print(f"Train Loss: {train_loss:.4f}, Precision: {train_precision:.4f}, Recall: {train_recall:.4f}, F1-Score: {train_f1:.4f}")
-    print(f"Test Loss: {test_loss:.4f}, Precision: {test_precision:.4f}, Recall: {test_recall:.4f}, F1-Score: {test_f1:.4f}")
+    print(f"Train Loss: {train_loss:.4f}, Train Precision: {train_precision:.4f}, Train Recall: {train_recall:.4f}, Train F1: {train_f1:.4f}")
+    print(f"Test Loss: {test_loss:.4f}, Test Precision: {test_precision:.4f}, Test Recall: {test_recall:.4f}, Test F1: {test_f1:.4f}")
 
 
 if __name__ == '__main__':
@@ -110,23 +108,23 @@ if __name__ == '__main__':
 
     model = BiLSTMEventDetector(input_channels=1).to(device)
 
-    state_dict = torch.load(os.path.join('models', '1ch.pth'), map_location=device)
+    state_dict = torch.load(os.path.join('models', '1ch_single.pth'), map_location=device)
     model.load_state_dict(state_dict)
 
     #Freeze layers
-    for param in model.parameters():
-        param.requires_grad = False
-    for param in model.fc.parameters():
-        param.requires_grad = True
+    # for param in model.parameters():
+    #     param.requires_grad = False
+    # for param in model.fc.parameters():
+    #     param.requires_grad = True
 
     #Train unfrozen layers
-    model = train_transfer(
-                model,
-                lr=0.001,
-                epochs=50, 
-                train_loader=train_loader,
-                device=device,
-                )
+    # model = train_transfer(
+    #             model,
+    #             lr=0.001,
+    #             epochs=50, 
+    #             train_loader=train_loader,
+    #             device=device,
+    #             )
     #Evaluate
-    evaluate(model, train_loader, test_loader, nn.BCELoss())
+    evaluate(model, train_loader, test_loader, nn.BCELoss(), device)
     plot_picking_predictions(model, test_loader, device)

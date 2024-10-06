@@ -63,7 +63,7 @@ def shift_waveform(waveform, index, sequence_length=424):
             start_idx = end_idx - sequence_length
         return waveform[start_idx:end_idx], start_idx
 
-def load_waveforms_and_labels(waveforms_folder, catalogue_file, norm_percentile, sequence_length=424):
+def load_waveforms_and_labels(waveforms_folder, catalogue_file, norm_percentile=0.998, sequence_length=424):
     waveforms = []
     labels = []
 
@@ -90,7 +90,7 @@ def load_waveforms_and_labels(waveforms_folder, catalogue_file, norm_percentile,
         waveform = load_waveform(os.path.join(waveforms_folder, f"{file_name}"))
         if waveform is not None:
             # Normalize max abs
-            max_abs = np.percentile(np.abs(waveform), norm_percentile * 100)
+            max_abs = np.percentile(np.abs(waveform), float(norm_percentile) * 100)
             waveform = waveform / max_abs
 
             # Clip values to be within the range [-1, 1]
@@ -135,11 +135,11 @@ def plot_picking_predictions(model, test_loader, device, num_samples=10):
     plt.show()
 
 #Main processing function
-def process_data( percentile=0.998 ): #["_N.csv", "_E.csv", "_Z.csv"]
+def process_data(): #["_N.csv", "_E.csv", "_Z.csv"]
     #Load the dataset
     waveforms, labels = load_waveforms_and_labels(waveforms_folder=waveforms_folder,
                                                   catalogue_file=catalogue_file,
-                                                  norm_percentile=percentile,)
+                                                  )
 
     #Split into train and test
     X_train, X_test, y_train, y_test = train_test_split(waveforms, labels, test_size=0.5, random_state=None)

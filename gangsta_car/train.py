@@ -12,7 +12,7 @@ from sklearn.metrics import precision_score, recall_score, f1_score
 
 def load_dataset():
     try:
-        with open('train_test_split.pkl', 'rb') as f:
+        with open('train_test_split_single.pkl', 'rb') as f:
             X_train, X_test, y_train, y_test = pickle.load(f)
             #Create the dataset and dataloader
             train_dataset = WaveformDataset(X_train, y_train)
@@ -108,13 +108,6 @@ def evaluate(model, train_loader, test_loader, criterion, labels_type='sequence'
         f1 = f1_score(all_targets, all_predictions, zero_division=0)
 
         avg_loss = total_loss / len(loader)
-
-        # Convert positive predictions to seconds for reporting
-        sample_rate = 600 / 60  # 600 samples in 60 seconds
-        positive_predictions_indices = np.where(all_predictions == 1)[0]
-        positive_predictions_seconds = positive_predictions_indices / sample_rate
-
-        print(f"{loader_name} Positive Predictions (in seconds): {positive_predictions_seconds}")
 
         return avg_loss, precision, recall, f1
 

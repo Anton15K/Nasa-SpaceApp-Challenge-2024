@@ -117,7 +117,7 @@ def load_waveforms_and_labels(waveforms_folder, catalogues_folder, norm_percenti
             waveform = load_waveform(channel_file)
             if waveform is not None:
                 # Normalize waveforms
-                max_abs = np.percentile(np.abs(waveform), norm_percentile*100)
+                max_abs = np.percentile(np.abs(waveform), float(norm_percentile)*100)
                 waveform = waveform / max_abs
                 # Clip values to be within the range [-1, 1]
                 waveform = np.clip(waveform, -1, 1)
