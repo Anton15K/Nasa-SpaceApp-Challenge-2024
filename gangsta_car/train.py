@@ -178,4 +178,4 @@ if __name__ == '__main__':
     # model.load_state_dict(state_dict)
 
     evaluate(model, train_loader, test_loader, nn.BCELoss(), device)
-    plot_picking_predictions(model, test_loader, device)
+    plot_picking_predictions(model, test_loader, device, labels_type='binary', num_samples=10)

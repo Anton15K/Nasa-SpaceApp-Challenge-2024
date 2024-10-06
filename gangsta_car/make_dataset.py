@@ -71,7 +71,7 @@ def process_labels(start, end, labels_type, factor=10, sequence_length=600):
         labels[start:end+1] = 1
     return labels
 
-def load_waveforms_and_labels(waveforms_folder, catalogues_folder, norm_percentile, channels,  labels_type='single'): #, channels=["_N.csv", "_E.csv", "_Z.csv"], channels=["_Z.csv"]
+def load_waveforms_and_labels(waveforms_folder, catalogues_folder, norm_percentile, channels, labels_type='single'):
     waveforms = []
     labels = []
 
@@ -102,7 +102,7 @@ def load_waveforms_and_labels(waveforms_folder, catalogues_folder, norm_percenti
                 labels.append(0)
         else:
             if pd.isna(p_arrival) or pd.isna(coda_end):
-                continue # Skip samples with missing labels when making a dataset for the lstm model
+                continue  # Skip samples with missing labels when making a dataset for the lstm model
 
             waveform_labels = process_labels(start=p_arrival, end=coda_end.strip('[[]]'), labels_type=labels_type)
             labels.append(waveform_labels)
@@ -117,7 +117,7 @@ def load_waveforms_and_labels(waveforms_folder, catalogues_folder, norm_percenti
             waveform = load_waveform(channel_file)
             if waveform is not None:
                 # Normalize waveforms
-                max_abs = np.percentile(np.abs(waveform), float(norm_percentile)*100)
+                max_abs = np.percentile(np.abs(waveform), float(norm_percentile) * 100)
                 waveform = waveform / max_abs
                 # Clip values to be within the range [-1, 1]
                 waveform = np.clip(waveform, -1, 1)
@@ -128,6 +128,20 @@ def load_waveforms_and_labels(waveforms_folder, catalogues_folder, norm_percenti
     waveforms = np.array(waveforms)
     labels = np.array(labels)
 
+    # Balance the dataset
+    if labels_type == 'binary':
+        pos_indices = np.where(labels == 1)[0]
+        neg_indices = np.where(labels == 0)[0]
+
+        min_size = min(len(pos_indices), len(neg_indices))
+        balanced_pos_indices = np.random.choice(pos_indices, min_size, replace=False)
+        balanced_neg_indices = np.random.choice(neg_indices, min_size, replace=False)
+
+        balanced_indices = np.concatenate((balanced_pos_indices, balanced_neg_indices))
+        np.random.shuffle(balanced_indices)
+
+        waveforms = waveforms[balanced_indices]
+        labels = labels[balanced_indices]
 
     return waveforms, labels
 
@@ -179,29 +193,44 @@ def plot_waveforms(waveforms, labels, num_samples=5 ):
     plt.tight_layout()
     plt.show()
 
-def plot_picking_predictions(model, test_loader, device, num_samples=10):
+def plot_picking_predictions(model, test_loader, device, labels_type, num_samples=10):
     model.eval()
     samples = []
     with torch.no_grad():
         for inputs, targets in test_loader:
             inputs, targets = inputs.to(device), targets.to(device)
             outputs = model(inputs)
-            samples.append((inputs.cpu(), targets.cpu(), outputs.cpu()))
+            samples.extend(zip(inputs.cpu(), targets.cpu(), outputs.cpu()))
             if len(samples) >= num_samples:
                 break
+
     fig, axes = plt.subplots(num_samples, 1, figsize=(10, 2 * num_samples))
     if num_samples == 1:
         axes = [axes]
+
     for i, (inputs, targets, outputs) in enumerate(samples[:num_samples]):
-        if targets.dim() == 2:
-            axes[i].plot(targets[0, :].numpy(), label='Actual', linestyle='--')
-            axes[i].plot(outputs[0, :, 0].numpy(), label='Predicted', linestyle=':')
-        elif targets.dim() == 3:
-            axes[i].plot(targets[0, :, 0].numpy(), label='Actual', linestyle='--')
-            axes[i].plot(outputs[0, :, 0].numpy(), label='Predicted', linestyle=':')
-        axes[i].set_title(f"Sample {i+1}")
+        inputs_np = inputs.numpy()
+        
+        if labels_type == 'binary':
+            true_label = int(targets.item())  # Binary label: 0 or 1
+            predicted_label = int(torch.round(outputs).item())  # Rounded output to get 0 or 1
+            axes[i].plot(inputs_np[:, 0], label='Waveform')
+            axes[i].set_title(f"Sample {i + 1} - True Label: {true_label}, Predicted Label: {predicted_label}")
+        else:
+            # For non-binary labels (sequence labels)
+            if targets.dim() == 2:
+                axes[i].plot(targets[0, :].numpy(), label='Actual', linestyle='--')
+                axes[i].plot(outputs[0, :, 0].numpy(), label='Predicted', linestyle=':')
+            elif targets.dim() == 3:
+                axes[i].plot(targets[0, :, 0].numpy(), label='Actual', linestyle='--')
+                axes[i].plot(outputs[0, :, 0].numpy(), label='Predicted', linestyle=':')
+
+            axes[i].set_title(f"Sample {i + 1}")
+
+        axes[i].set_xlabel("Time")
+        axes[i].set_ylabel("Amplitude")
         axes[i].legend()
-        axes[i].set_ylim(0, 1)
+
     plt.tight_layout()
     plt.show()
 
@@ -220,7 +249,7 @@ def process_data(labels_type, test_percent=0.1, percentile=0.998,plot=False, cha
     #Split into train and test
     X_train, X_test, y_train, y_test = train_test_split(waveforms, labels, test_size=test_percent, random_state=None)
     # Save the split datasets
-    with open('train_test_split.pkl', 'wb') as f:
+    with open('train_test_split_detection.pkl', 'wb') as f:
         pickle.dump((X_train, X_test, y_train, y_test), f)
 
     #Create the dataset and dataloader
