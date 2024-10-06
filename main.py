@@ -8,7 +8,11 @@ from matplotlib import pyplot as plt
 
 def change_file_to_batches(data_path, filename, batched_triggers):
     data = pd.read_csv(data_path + "/" + filename)
-    velocity = data["velocity(m/s)"].values
+
+    velocity_namespace = 'velocity(m/s)'
+    if 'velocity(c/s)' in data.columns:
+        velocity_namespace = 'velocity(c/s)'
+    velocity = data[velocity_namespace].values
 
     batched_velocity = []
 

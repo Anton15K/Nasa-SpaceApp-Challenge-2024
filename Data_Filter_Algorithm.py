@@ -30,6 +30,12 @@ class FilterAlgorithm:
             print(f"Warning: waveform file {input_file} does not exist.")
             return np.array([])
         df = pd.read_csv(input_file)
+        if 'rel_time(sec)' in df.columns:
+            time_rel = 'rel_time(sec)'
+
+        if 'velocity(c/s)' in df.columns:
+            velocity = 'velocity(c/s)'
+
         velocity_data = df[velocity].values
         time_data = df[time_rel].values
         sampling_rate = 1 / (df[time_rel][1] - df[time_rel][0])
