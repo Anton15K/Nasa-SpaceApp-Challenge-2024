@@ -32,17 +32,14 @@ class FilterAlgorithm:
         df = pd.read_csv(input_file)
         velocity_data = df[velocity].values
         time_data = df[time_rel].values
-
         sampling_rate = 1 / (df[time_rel][1] - df[time_rel][0])
-        print(f"Sampling rate: {sampling_rate} Hz")
 
         triggers = np.array(self.local_maxima(velocity_data, sampling_rate))
         # print("finished")
         return np.array(triggers)
 
-    def convert_to_batches_triggers(self, batch_size, filename):
+    def convert_to_batches_triggers_indexes(self, batch_size, filename):
         triggers = self.process_waveform(filename)
-        print(triggers)
         batched_triggers = []
         for i in range(0, len(triggers)):
             batches = []
