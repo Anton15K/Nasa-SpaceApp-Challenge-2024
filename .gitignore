@@ -2,3 +2,4 @@ dataset/
 data/
 .venv/
 __pycache__/
+../__pycache__/

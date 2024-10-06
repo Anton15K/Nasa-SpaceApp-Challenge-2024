@@ -7,28 +7,38 @@ from gangsta_car.utils.model_instances import PickerModel, DetectorModel
 from gangsta_car.utils.preprocess import preprocess
 from matplotlib import pyplot as plt
 
-def change_file_to_batches(data_path, filename, batched_triggers):
+def change_file_to_batches(data_path, filename, batched_triggers, batch_size=600):
     """
+    Splits the velocity data into batches based on trigger indices.
+
     Args:
         data_path (str): Path to the data directory.
         filename (str): Name of the CSV file.
         batched_triggers (list): List of batched trigger indices.
+        batch_size (int): Size of each batch (default is 600).
 
     Returns:
         list: Nested list of velocity batches.
     """
+    # Read the CSV file
     data = pd.read_csv(os.path.join(data_path, filename))
     velocity = data["velocity(m/s)"].values
 
     batched_velocity = []
-    for i in range(len(batched_triggers)):
+    for window_idx, window_triggers in enumerate(batched_triggers):
         batches = []
-        for j in range(len(batched_triggers[i])):
-            start_idx, end_idx = batched_triggers[i][j]
+        for trigger_idx, (start_idx, end_idx) in enumerate(window_triggers):
+            # Extract the chunk based on start and end indices
             batch = velocity[start_idx:end_idx]
+            # If the chunk is smaller than batch_size, pad it with zeros
+            if len(batch) < batch_size:
+                padding = batch_size - len(batch)
+                batch = np.pad(batch, (0, padding), 'constant')
             batches.append(batch)
         batched_velocity.append(batches)
     return batched_velocity
+
+
 
 def perform_detection_and_picking(detection_model, picker_model, batched_velocity, batched_triggers):
     """
@@ -50,24 +60,31 @@ def perform_detection_and_picking(detection_model, picker_model, batched_velocit
 
         # Iterate over each chunk in the window
         for chunk_idx, chunk in enumerate(window_chunks):
-
+            # Preprocess the chunk
             chunk_preprocessed = preprocess(chunk, 0.998)  # Normalize the chunk
-            chunk_tensor = torch.tensor(chunk_preprocessed).unsqueeze(0).unsqueeze(2).float()  # Shape: [1, 600, 1]
 
-            # Run the detector
-            prediction = detection_model.predict(chunk_tensor)
+            # Prepare tensor for detection model: [1, 1, 600]
+            chunk_tensor_det = torch.tensor(chunk_preprocessed).unsqueeze(0).unsqueeze(2).float()
 
-            if prediction == 1:
-                picker_input = chunk_tensor
-                event_probs = picker_model.predict(picker_input)  #[1, 600, 1]
+            # Run the detection model (ConvNet)
+            prediction = detection_model.predict(chunk_tensor_det)
 
-                event_probs = event_probs.squeeze(2)  # Shape: [1, 600]
-                event_sample_in_chunk = torch.argmax(event_probs, dim=1).item()  # Index within the chunk
+            if prediction:
+                # Event detected, use the picker model to find the precise location
 
-                # Calculate the absolute index
+                # Prepare tensor for picker model: [1, 600, 1]
+                chunk_tensor_pick = torch.tensor(chunk_preprocessed).unsqueeze(0).unsqueeze(2).float()
+
+                # Run the picker model (BiLSTM)
+                event_sample_in_chunk = picker_model.predict(chunk_tensor_pick)  # Returns int index
+
+                # Calculate the absolute index in the initial waveform
                 absolute_index = window_chunk_triggers[chunk_idx][0] + event_sample_in_chunk
 
+                # Append the absolute index to the list
                 event_indices.append(absolute_index)
+
+                # Break after the first detected event in the window
                 break
 
     return event_indices
@@ -80,19 +97,23 @@ def main():
 
     algo = FilterAlgorithm(data_path)
 
-    batched_triggers = algo.convert_to_batches_triggers_indexes(window_size, filename) #2400
-    batched_velocity = change_file_to_batches(data_path, filename, batched_triggers)   #600
+    # Get batched triggers
+    batched_triggers = algo.convert_to_batches_triggers_indexes(batch_size=batch_size, filename=filename)
+    # The above method should return a list where each element corresponds to a window, containing multiple [start, end] indices for 600-sample chunks
+
+    # Get batched velocity data (windows split into chunks of 600 samples)
+    batched_velocity = change_file_to_batches(data_path, filename, batched_triggers, batch_size=batch_size)
 
 
-    detection_model = DetectorModel("gangsta_car/models", "signal_detection.pth", "cuda")
-    picker_model = PickerModel("gangsta_car/models", "event_picker.pth", "cuda")
+    detection_model = DetectorModel("gangsta_car/models", "signal_detection_1ch.pth", "cuda")
+    picker_model = PickerModel("gangsta_car/models", "1ch_single_var3.pth", "cuda")
 
     # Perform detection and picking
     event_indices = perform_detection_and_picking(detection_model, picker_model, batched_velocity, batched_triggers)
-
-    print("Detected event indices in the initial waveform:")
-    for index in event_indices:
-        print(index)
+    print(event_indices)
+    # print("Detected event indices in the initial waveform:")
+    # for index in event_indices:
+    #     print(index)
 
 if __name__ == "__main__":
     main()
