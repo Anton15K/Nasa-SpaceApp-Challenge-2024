@@ -29,17 +29,27 @@ def get_total_batch(batched_velocity : list):
     return total_batch
 def perform_detection(detection_model : DetectorModel, batched_velocity : list):
     picked_triggers = []
-    for i in range(0, len(batched_velocity)):
+
+    for i in range(len(batched_velocity)):
         picked_indexes = []
 
         total_batch = get_total_batch(batched_velocity[i])
+        # plt.plot(total_batch)
+        # plt.show()
 
-        plt.plot(total_batch)
-        plt.show()
+        # Loop over each batch in the set
+        for batch_idx, batch in enumerate(batched_velocity[i]):
+            batch_tensor = torch.tensor(batch).unsqueeze(0).unsqueeze(2).float()
+            prediction = 1
+            # detection_model.predict(batch_tensor)
 
-        picked_index = detection_model.predict(total_batch.unsqueeze(0).unsqueeze(2).float())
-        picked_indexes.append(picked_index)
+            if prediction == 1:
+                absolute_index = batched_triggers[i][batch_idx][0]
+                picked_indexes.append({'waveform':batch_tensor[batch_idx::batch_idx+600], 'absolute_index': absolute_index})
+                break
+
         picked_triggers.append(picked_indexes)
+
     return picked_triggers
 
 
@@ -63,17 +73,13 @@ def perform_detection_3_layers(detection_model : DetectorModel, batched_velocity
 
 
 
-
-
-
-
 def main():
     data_path = "sample_data"
     algo = FilterAlgorithm(data_path)
     filename = "test_data.csv"
     batch_size = 600
-    batched_triggers = algo.convert_to_batches_triggers_indexes(batch_size, filename)
-    batched_velocity = change_file_to_batches(data_path, filename, batched_triggers)
+    batched_triggers = algo.convert_to_batches_triggers_indexes(batch_size, filename) #2400
+    batched_velocity = change_file_to_batches(data_path, filename, batched_triggers) #600
     detection_model = DetectorModel("gangsta_car/models", "signal_detection.pth", "cpu")
 
     # for i in range(0, len(batched_velocity)):
@@ -81,7 +87,7 @@ def main():
     #     plt.plot(total_batch)
     #     plt.show()
     #     plt.close()
-    picked_triggers = perform_detection_3_layers(detection_model, batched_velocity)
+    picked_triggers = perform_detection(detection_model, batched_velocity)
     print(picked_triggers)
 
 
