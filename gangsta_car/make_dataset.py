@@ -59,16 +59,19 @@ def load_waveform(file_path):
         print(f"Error loading waveform {file_path}: {e}")
         return None
 
-def process_labels(start, end, factor=10, sequence_length=600):
+def process_labels(start, end, labels_type, factor=10, sequence_length=600):
     start = int(float(start) * factor)
-    # end = int(float(end) * factor)
+    end = int(float(end) * factor)
     # Create a one-dimensional array of zeros with length = sequence_length
     labels = np.zeros(sequence_length)
-    # labels[start:end+1] = 1
-    labels[start] = 1
+
+    if labels_type == 'single':
+        labels[start] = 1
+    else:
+        labels[start:end+1] = 1
     return labels
 
-def load_waveforms_and_labels(waveforms_folder, catalogues_folder, norm_percentile, channels,  labels_type='binary'): #, channels=["_N.csv", "_E.csv", "_Z.csv"], channels=["_Z.csv"]
+def load_waveforms_and_labels(waveforms_folder, catalogues_folder, norm_percentile, channels,  labels_type='single'): #, channels=["_N.csv", "_E.csv", "_Z.csv"], channels=["_Z.csv"]
     waveforms = []
     labels = []
 
@@ -101,7 +104,7 @@ def load_waveforms_and_labels(waveforms_folder, catalogues_folder, norm_percenti
             if pd.isna(p_arrival) or pd.isna(coda_end):
                 continue # Skip samples with missing labels when making a dataset for the lstm model
 
-            waveform_labels = process_labels(p_arrival, coda_end.strip('[[]]'), sequence_length=600)
+            waveform_labels = process_labels(start=p_arrival, end=coda_end.strip('[[]]'), labels_type=labels_type)
             labels.append(waveform_labels)
 
         combined_waveform = []
@@ -203,7 +206,7 @@ def plot_picking_predictions(model, test_loader, device, num_samples=10):
     plt.show()
 
 #Main processing function
-def process_data(labels_type, percentile=0.998,plot=False, channels=["_Z.csv"] ): #["_N.csv", "_E.csv", "_Z.csv"]
+def process_data(labels_type, test_percent=0.1, percentile=0.998,plot=False, channels=["_Z.csv"] ): #["_N.csv", "_E.csv", "_Z.csv"]
     #Load the dataset
     waveforms, labels = load_waveforms_and_labels(waveforms_folder=waveforms_folder,
                                                   catalogues_folder=catalogues_folder,
@@ -215,7 +218,7 @@ def process_data(labels_type, percentile=0.998,plot=False, channels=["_Z.csv"] )
         plot_waveforms(waveforms, labels, num_samples=10)
 
     #Split into train and test
-    X_train, X_test, y_train, y_test = train_test_split(waveforms, labels, test_size=0.2, random_state=None)
+    X_train, X_test, y_train, y_test = train_test_split(waveforms, labels, test_size=test_percent, random_state=None)
     # Save the split datasets
     with open('train_test_split.pkl', 'wb') as f:
         pickle.dump((X_train, X_test, y_train, y_test), f)
