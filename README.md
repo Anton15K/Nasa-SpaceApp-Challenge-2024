@@ -78,7 +78,7 @@ python main.py
 ```
 
 ## **Presentation**
-There is a google slides presentation about this project, which explains it in detail.  
+For more info, please refer to the presentation about this project.  
 The presentation can be accessed by this link:
 https://drive.google.com/file/d/1oU8SUEi75MI2FX7OAEqwaS13731-vfjo/view?usp=sharing
 
