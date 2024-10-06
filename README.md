@@ -9,7 +9,7 @@ This project analyses the data from seismology missions and separates data about
 1. [Project Overview](#project-overview)
 2. [Installation](#installation)
 3. [Usage](#usage)
-4. [Results](#results)
+4. [Presentation](#presentation)
 5. [License](#license)
 
 ---
@@ -75,6 +75,11 @@ To process the seismic data and filter out the noise:
 ```bash
 python main.py
 ```
+
+## **Presentation**
+There is a google slides presentation about this project, which explains it in detail.  
+The presentation can be accessed by this link:
+[Seismic Detection Across the Solar System.pdf](https://github.com/user-attachments/files/17270826/Seismic.Detection.Across.the.Solar.System.pdf)
 
 ## **License**
 This project is licensed under the Apache License. More information here: http://www.apache.org/licenses/
