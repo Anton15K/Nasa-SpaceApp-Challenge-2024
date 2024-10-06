@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class ConvNETEventClassifier(nn.Module): #Outputs whether there is an event in the waveform or not
-    def __init__(self, input_channels=3, sequence_length=600, num_classes=1):
+    def __init__(self, input_channels=1, sequence_length=600, num_classes=1):
         super(ConvNETEventClassifier
     , self).__init__()
 
@@ -43,7 +43,7 @@ class ConvNETEventClassifier(nn.Module): #Outputs whether there is an event in t
         )
 
 class BiLSTMEventDetector(nn.Module):
-    def __init__(self, input_channels=3, hidden_size=64, num_layers=2, dropout_prob=0.6, sequence_length=600):
+    def __init__(self, input_channels=1, hidden_size=64, num_layers=2, dropout_prob=0.6, sequence_length=600):
         super(BiLSTMEventDetector, self).__init__()
 
         # Bidirectional LSTM layer

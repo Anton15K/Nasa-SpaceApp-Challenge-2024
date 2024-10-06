@@ -1,5 +1,7 @@
+import os
 import numpy as np
-from models import BiLSTMEventDetector, ConvNETEventClassifier
+import torch
+from gangsta_car.models import BiLSTMEventDetector, ConvNETEventClassifier
 
 
 class PickerModel:
@@ -28,7 +30,7 @@ class PickerModel:
         inputs = inputs.to(self.device)
 
         with torch.no_grad():
-            output = self.model(inputs.unsqueeze(0))
+            output = self.model(inputs)
 
         # Get the index of the most propable sample
         output_index = torch.argmax(output, dim=1).cpu().numpy()
@@ -38,7 +40,7 @@ class PickerModel:
 
 
 class DetectorModel:
-    def __init__(self, model_path, model_name, device, prediction_threshold=0.6):
+    def __init__(self, model_path, model_name, device, prediction_threshold=0.8):
         """
         model_path (str): Path to the directory containing CONVOLUTIONAL the model.
         model_name (str): Filename of the model.
@@ -46,6 +48,7 @@ class DetectorModel:
         """
         self.device = torch.device(device)
         self.model = ConvNETEventClassifier(input_channels=1).to(self.device)
+        self.prediction_threshold = prediction_threshold
 
         state_dict = torch.load(
             os.path.join(model_path, model_name),
@@ -63,6 +66,6 @@ class DetectorModel:
             output = self.model(inputs)
 
         # Apply a threshold to classify as either 0 or 1
-        prediction = torch.sigmoid(output).round(threshold=self.prediction_threshold).item()
+        prediction = (output > self.prediction_threshold).float().round().item()
 
         return bool(prediction)
