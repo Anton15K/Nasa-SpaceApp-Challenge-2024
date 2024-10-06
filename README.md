@@ -20,7 +20,7 @@ This project analyses the data from seismology missions and separates data about
 This is done in [Data_Filter_Algorithm.py](Data_Filter_Algorithm.py) file.
 2. **AI:** Then, a Bidirectional LSTM model processes the updated data and spots the earthquakes.
 The AI model is in [this directory](gangsta_car).
-3. **Result** In the end, the time, when the earthquake begins is calculated from the output of AI.
+3. **Result**: In the end, the time, when the earthquake begins is calculated from the output of AI.
 This is done in the [main file](main.py).
 ## **Installation**
 
