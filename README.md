@@ -70,6 +70,7 @@ Ensure your seismic data is in a CSV file with the following format:
 ### **Step 2: change the file path**
 In main.py, on 81 line, change the data_path variable to the path of your file and filename to the name of your file
 
+### **Step 3: run main.py** 
 To process the seismic data and filter out the noise:
 
 ```bash
