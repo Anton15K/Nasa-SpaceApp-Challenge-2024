@@ -26,7 +26,7 @@ This is done in the [main file](main.py).
 
 ### **Prerequisites**
 
-- Python 3.x or higher
+- Python 3.9
 - Required Python libraries:
   - numpy
   - pandas
