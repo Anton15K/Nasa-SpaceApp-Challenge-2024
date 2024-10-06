@@ -2,9 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class SignalDetectionV1(nn.Module): #Outputs whether there is an event in the waveform or not
+class ConvNETEventClassifier(nn.Module): #Outputs whether there is an event in the waveform or not
     def __init__(self, input_channels=3, sequence_length=600, num_classes=1):
-        super(SignalDetectionV1, self).__init__()
+        super(ConvNETEventClassifier
+    , self).__init__()
 
         #Convolutional blocks
         self.conv_layers = nn.Sequential(

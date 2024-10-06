@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from make_dataset import WaveformDataset, plot_picking_predictions, process_data
-from models import BiLSTMEventDetector, SignalDetectionV1
+from models import BiLSTMEventDetector, ConvNETEventClassifier
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import precision_score, recall_score, f1_score
@@ -28,7 +28,7 @@ def load_dataset():
 
 
 def train_detection(channels, lr, epochs, train_loader, test_loader, device, name='signal_detection_1ch.pth'):
-    model = SignalDetectionV1(input_channels=channels).to(device)  # Load the model
+    model = ConvNETEventClassifier(input_channels=channels).to(device)  # Load the model
     criterion = nn.BCELoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=True)
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     #                         test_loader=test_loader,
     #                         device=device,)
 
-    model = SignalDetectionV1(input_channels=1).to(device)
+    model = ConvNETEventClassifier(input_channels=1).to(device)
 
     state_dict = torch.load(os.path.join('models', 'signal_detection_1ch.pth'), map_location=device)
     model.load_state_dict(state_dict)

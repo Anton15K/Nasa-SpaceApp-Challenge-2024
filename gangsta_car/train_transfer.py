@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from make_lunar_dataset import WaveformDataset, plot_picking_predictions, process_data #IMPORTANT
-from models import BiLSTMEventDetector, SignalDetectionV1
+from models import BiLSTMEventDetector, ConvNETEventClassifier
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import StepLR
 from sklearn.metrics import precision_score, recall_score, f1_score
