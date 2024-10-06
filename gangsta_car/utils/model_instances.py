@@ -1,5 +1,7 @@
+import os
 import numpy as np
-from models import BiLSTMEventDetector, ConvNETEventClassifier
+import torch
+from gangsta_car.models import BiLSTMEventDetector, ConvNETEventClassifier
 
 
 class PickerModel:
