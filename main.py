@@ -105,8 +105,8 @@ def main():
     batched_velocity = change_file_to_batches(data_path, filename, batched_triggers, batch_size=batch_size)
 
 
-    detection_model = DetectorModel("gangsta_car/models", "signal_detection_1ch.pth", "cuda")
-    picker_model = PickerModel("gangsta_car/models", "1ch_single_var3.pth", "cuda")
+    detection_model = DetectorModel("gangsta_car/models", "signal_detection_1ch.pth", "cpu")
+    picker_model = PickerModel("gangsta_car/models", "1ch_single_var3.pth", "cpu")
 
     # Perform detection and picking
     event_indices = perform_detection_and_picking(detection_model, picker_model, batched_velocity, batched_triggers)
@@ -121,20 +121,16 @@ def main():
     rel_time = file["time_rel(sec)"].values
     for i in range(0, len(event_indices)):
         ans.append(rel_time[event_indices[i]])
+    print(ans)
 
-    try:
-        dataframe = pd.read_csv("results/lunar/arrival_times.csv")
-    except:
-        dataframe = pd.DataFrame()
 
-    dataframe.add(
-         pd.DataFrame({
+    dataframe = pd.DataFrame({
             'filename': [filename] * len(ans),
             'time_rel(sec)': ans
         })
-    )
 
-    dataframe.to_csv("sample_data/arrival_times.csv", index=False, header=True)
+
+    dataframe.to_csv(f"results/lunar/{filename}", index=False, header=True)
 
 if __name__ == "__main__":
     main()
