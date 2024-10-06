@@ -9,7 +9,7 @@ This project analyses the data from seismology missions and separates data about
 1. [Project Overview](#project-overview)
 2. [Installation](#installation)
 3. [Usage](#usage)
-4. [Presentation](#presentation)
+4. [More info](#presentation)
 5. [License](#license)
 
 ---
